@@ -41,14 +41,19 @@ def show_map():
     plt.show()
 
 
+def plot_triangles(latitudes, longitudes, values, colormap="winter", alpha=0.5, label=None):
+    """
+    Plots a contour on top of map
+    :param latitudes: list of latitudes
+    :param longitudes: list of longitudes
+    :param values: list of z values
+    :param colormap: colormap(optional)
+    :param alpha: transparency(optional)
+    :param label: color bar label(optional)
+    :return:
+    """
 
-def plot_colormesh(latitudes, longitudes, values, colormap="RdBu"):
-    global ax
-    ax.pcolormesh(latitudes, longitudes, values, cmap=colormap)
-
-def plot_triangles(latitudes, longitudes, values, colormap="winter", alpha=0.5):
-    # Create a triangulation of the irregular points
-
+    # transforming coordinate points to etrs
     latitudes_fin = []
     longitudes_fin = []
 
@@ -58,14 +63,26 @@ def plot_triangles(latitudes, longitudes, values, colormap="winter", alpha=0.5):
         longitudes_fin.append(lon)
 
 
+    # triangulating etrs datapoints
     triang = mtri.Triangulation(latitudes_fin, longitudes_fin)
 
+    # loading global ax and fig for plotting
     global ax
+    global fig
 
     # Create a tricontour plot
-    ax.tricontourf(triang, values, cmap=colormap, alpha=alpha)
+    tricontour = ax.tricontourf(triang, values, cmap=colormap, alpha=alpha)
+
+    # adding colorbar
+    fig.colorbar(tricontour, ax=ax, label=label)
 
 
+
+
+def plot_shapefile(filename, color="grey", edgecolor="grey", fill_transparency= 0.2):
+    details2 = geopandas.read_file("pymapper/shapefiles/"+filename)
+    details2 = details2.to_crs(crs_in_projections)
+    details2.plot(ax=ax, color=color, edgecolor=edgecolor, alpha=fill_transparency)
 
 
 def plot_point(latitude, longitude, color = "#FF8800", size = 10):
