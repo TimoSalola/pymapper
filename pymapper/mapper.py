@@ -1,12 +1,15 @@
 from functools import partial
 
 import geopandas
+import numpy
 import pyproj
 import cartopy.crs
 import matplotlib.pyplot as plt
+from pyproj import Transformer
 from shapely.geometry import Point
 from shapely.ops import transform
 
+import matplotlib.tri as mtri
 import pymapper.address_to_coordinate
 
 ax = None
@@ -39,6 +42,32 @@ def show_map():
 
 
 
+def plot_colormesh(latitudes, longitudes, values, colormap="RdBu"):
+    global ax
+    ax.pcolormesh(latitudes, longitudes, values, cmap=colormap)
+
+def plot_triangles(latitudes, longitudes, values, colormap="winter", alpha=0.5):
+    # Create a triangulation of the irregular points
+
+    latitudes_fin = []
+    longitudes_fin = []
+
+    for i in range(len(latitudes)):
+        lat, lon = __wgs_to_etrs(latitudes[i], longitudes[i])
+        latitudes_fin.append(lat)
+        longitudes_fin.append(lon)
+
+
+    triang = mtri.Triangulation(latitudes_fin, longitudes_fin)
+
+    global ax
+
+    # Create a tricontour plot
+    ax.tricontourf(triang, values, cmap=colormap, alpha=alpha)
+
+
+
+
 def plot_point(latitude, longitude, color = "#FF8800", size = 10):
     """
     Adds a scatter point to plot
@@ -60,39 +89,15 @@ def plot_address(address_string, color = "#7B68EE", size = 10):
 def limit_map_to_region(top=61, bottom=59.9, left=23.5, right=26.5):
 
     global ax
-    # boundary points, bottom left,top right corners
-    p1 = Point(bottom, left)
-    p2 = Point(top, right)
 
     # projection, this is used to transform the points to the correct coordinate system
-    projection = partial(
-        pyproj.transform,
-        pyproj.Proj("EPSG:4326"),
-        pyproj.Proj("EPSG:3067")
-    )
 
-    # points in the correct coord system
-    p1a = transform(projection, p1)
-    p2a = transform(projection, p2)
-    top = p2a.y
-    bottom = p1a.y
-    left = p1a.x
-    right = p2a.x
-
-    """
-    print("top")
-    print(top)
-    print("bottom")
-    print(bottom)
-    print("left")
-    print(left)
-    print("right")
-    print(right)
-    """
+    transformer = Transformer.from_crs("EPSG:4326", "EPSG:3067")
+    top, left = transformer.transform(top, left)
+    bottom, right = transformer.transform(bottom, right)
 
     ax.set_xlim(left, right)
     ax.set_ylim(bottom, top)
-
 
 
 def __add_wgs84_axis(visible_gridlines = False):
@@ -103,15 +108,11 @@ def __add_wgs84_axis(visible_gridlines = False):
 
 
 def __wgs_to_etrs(latitude, longitude):
-    p1 = Point(latitude, longitude)
-    projection = partial(
-        pyproj.transform,
-        pyproj.Proj("EPSG:4326"),
-        pyproj.Proj("EPSG:3067")
-    )
-    p1a = transform(projection, p1)
 
-    return p1a.x, p1a.y
+    transformer = Transformer.from_crs("EPSG:4326", "EPSG:3067")
+    lat, lon = transformer.transform(latitude, longitude)
+
+    return lat, lon
 
 
 def add_title(title):
